@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXO IA - Sistema de Gestão Industrial</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        industrial: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for professional icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for interactive analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col overflow-hidden">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <header class="bg-slate-900 border-b border-slate-800 h-16 flex items-center justify-between px-6 shrink-0 z-20">
+        <div class="flex items-center space-x-3">
+            <div class="bg-emerald-600 p-2 rounded-lg text-white font-bold flex items-center justify-center shadow-lg shadow-emerald-900/40">
+                <i class="fa-solid fa-industry text-xl"></i>
+            </div>
+            <div>
+                <span class="text-lg font-bold tracking-wider bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">NEXO INDUSTRIAL</span>
+                <span class="text-xs block text-slate-400">Sistema Inteligente de Gestão & Qualidade</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <!-- Profile Selector -->
+            <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                <i class="fa-solid fa-user-shield text-emerald-400 text-sm"></i>
+                <span class="text-xs text-slate-400 hidden sm:inline">Perfil:</span>
+                <select id="userRoleSelect" onchange="switchRole(this.value)" class="bg-transparent text-sm font-medium text-white focus:outline-none cursor-pointer">
+                    <option value="gerente" class="bg-slate-800">Gerente de Produção (Total)</option>
+                    <option value="almoxarife" class="bg-slate-800">Almoxarife (Estoque)</option>
+                    <option value="qualidade" class="bg-slate-800">Supervisor de Qualidade</option>
+                </select>
+            </div>
+
+            <!-- Quick Status Badge -->
+            <div class="hidden md:flex items-center space-x-2 bg-emerald-950/60 border border-emerald-800/60 px-3 py-1.5 rounded-lg text-emerald-400 text-xs font-semibold">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>IOT Linha 01: Ativa</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 select-none">
+            <div class="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Módulos do Sistema</div>
+            <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all text-left bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 shadow-sm">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                    <span>Dashboard Geral</span>
+                </button>
+                <button onclick="switchTab('estoque')" id="btn-estoque" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all text-left text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <i class="fa-solid fa-boxes-stacked w-5 text-center"></i>
+                    <span>Controle de Estoque</span>
+                </button>
+                <button onclick="switchTab('producao')" id="btn-producao" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all text-left text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <i class="fa-solid fa-gears w-5 text-center"></i>
+                    <span>Ordens de Produção (OP)</span>
+                </button>
+                <button onclick="switchTab('qualidade')" id="btn-qualidade" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all text-left text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <i class="fa-solid fa-microscope w-5 text-center"></i>
+                    <span>Qualidade & Rastreio</span>
+                </button>
+                <button onclick="switchTab('relatorios')" id="btn-relatorios" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all text-left text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <i class="fa-solid fa-file-invoice-dollar w-5 text-center"></i>
+                    <span>Relatórios Gerenciais</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
+                <div class="flex justify-between items-center mb-1">
+                    <span>Versão v2.4 NEXO</span>
+                    <span class="text-emerald-400 font-mono">ONLINE</span>
+                </div>
+                <p class="text-[10px]">Indústria Eletrotrônica 4.0</p>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-950 p-6 relative">
+            
+            <!-- ================= TAB 1: DASHBOARD ================= -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">Dashboard de Estoque e Produção</h1>
+                        <p class="text-sm text-slate-400">Visão integrada em tempo real da disponibilidade de materiais e ordens ativas.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="refreshData()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm font-medium border border-slate-700 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-rotate-right text-xs"></i>
+                            <span>Atualizar Dados</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total de Itens</p>
+                                <h3 id="kpi-total-itens" class="text-3xl font-bold text-white mt-1">0</h3>
+                            </div>
+                            <div class="bg-blue-500/10 text-blue-400 p-3 rounded-xl border border-blue-500/20">
+                                <i class="fa-solid fa-box text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-slate-400">
+                            <span class="text-emerald-400 font-semibold flex items-center mr-1"><i class="fa-solid fa-arrow-up mr-0.5"></i> +4</span> cadastrados este mês
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Abaixo do Mínimo</p>
+                                <h3 id="kpi-baixo-minimo" class="text-3xl font-bold text-amber-400 mt-1">0</h3>
+                            </div>
+                            <div class="bg-amber-500/10 text-amber-400 p-3 rounded-xl border border-amber-500/20">
+                                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-amber-400/90 font-medium">
+                            <span>Ação de reabastecimento necessária</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Movimentações Hoje</p>
+                                <h3 id="kpi-movimentacoes" class="text-3xl font-bold text-emerald-400 mt-1">0</h3>
+                            </div>
+                            <div class="bg-emerald-500/10 text-emerald-400 p-3 rounded-xl border border-emerald-500/20">
+                                <i class="fa-solid fa-right-left text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-slate-400">
+                            <span class="text-emerald-400 font-semibold mr-1">Entradas & Saídas</span> registradas
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Materiais Críticos</p>
+                                <h3 id="kpi-criticos" class="text-3xl font-bold text-rose-400 mt-1">0</h3>
+                            </div>
+                            <div class="bg-rose-500/10 text-rose-400 p-3 rounded-xl border border-rose-500/20">
+                                <i class="fa-solid fa-skull-crossbones text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-rose-400 font-medium">
+                            <span>Risco iminente de parada na linha</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertas Automáticos de Estoque -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-bell text-amber-400"></i>
+                            <span>Alertas Automáticos de Estoque & Produção</span>
+                        </h2>
+                        <span class="text-xs bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20">Tempo Real</span>
+                    </div>
+                    <div id="alerts-container" class="space-y-3">
+                        <!-- Gerado dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- Gráficos de Produção & Estoque -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                        <h3 class="text-base font-bold text-white mb-4">Consumo de Componentes Críticos (Semanal)</h3>
+                        <div class="h-64 relative">
+                            <canvas id="chartConsumo"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                        <h3 class="text-base font-bold text-white mb-4">Status das Ordens de Produção (OP)</h3>
+                        <div class="h-64 relative flex items-center justify-center">
+                            <canvas id="chartOPStatus"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 2: CONTROLE DE ESTOQUE ================= -->
+            <div id="tab-estoque" class="tab-content hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">Controle de Estoque & Materiais</h1>
+                        <p class="text-sm text-slate-400">Gerenciamento completo de componentes, fornecedores, locais físicos e movimentações.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="openMovimentoModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-700 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-right-left"></i>
+                            <span>Registrar Movimentação</span>
+                        </button>
+                        <button onclick="openItemModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-900/40 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Novo Item</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros e Busca -->
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="relative w-full sm:w-80">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="search-estoque" oninput="filterEstoque()" placeholder="Buscar por código, nome ou fornecedor..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <select id="filter-categoria" onchange="filterEstoque()" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="">Todas as Categorias</option>
+                            <option value="Semicondutores">Semicondutores</option>
+                            <option value="Passivos">Passivos</option>
+                            <option value="Conectores">Conectores</option>
+                            <option value="Placas PCB">Placas PCB</option>
+                            <option value="Chassi / Mecânica">Chassi / Mecânica</option>
+                        </select>
+                        <select id="filter-status-estoque" onchange="filterEstoque()" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="">Todos os Status</option>
+                            <option value="normal">Estoque Normal</option>
+                            <option value="baixo">Abaixo do Mínimo</option>
+                            <option value="zerado">Sem Estoque</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tabela de Estoque -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-800/80 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                    <th class="p-4">Código / Item</th>
+                                    <th class="p-4">Categoria</th>
+                                    <th class="p-4">Fornecedor</th>
+                                    <th class="p-4">Localização</th>
+                                    <th class="p-4 text-center">Qtd Atual</th>
+                                    <th class="p-4 text-center">Estoque Min</th>
+                                    <th class="p-4 text-center">Status</th>
+                                    <th class="p-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-estoque-body" class="divide-y divide-slate-800 text-sm">
+                                <!-- Preenchido por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Histórico Recente de Movimentações -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center space-x-2">
+                        <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i>
+                        <span>Auditoria de Movimentações Recentes</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase">
+                                    <th class="py-3 px-4">Data/Hora</th>
+                                    <th class="py-3 px-4">Tipo</th>
+                                    <th class="py-3 px-4">Item</th>
+                                    <th class="py-3 px-4 text-center">Quantidade</th>
+                                    <th class="py-3 px-4">Responsável</th>
+                                    <th class="py-3 px-4">Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-mov-body" class="divide-y divide-slate-800/50">
+                                <!-- Preenchido por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 3: ORDENS DE PRODUÇÃO ================= -->
+            <div id="tab-producao" class="tab-content hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">Gestão de Ordens de Produção (OP)</h1>
+                        <p class="text-sm text-slate-400">Planejamento de fabricação com verificação automática de disponibilidade de materiais no almoxarifado.</p>
+                    </div>
+                    <div>
+                        <button onclick="openOPModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-900/40 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Nova Ordem de Produção</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards de Resumo de OPs -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase">OPs em Planejamento</p>
+                            <h4 id="op-planejamento-count" class="text-2xl font-bold text-amber-400 mt-1">0</h4>
+                        </div>
+                        <div class="bg-amber-500/10 text-amber-400 p-3 rounded-xl"><i class="fa-solid fa-clipboard-list text-lg"></i></div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase">OPs em Fabricação</p>
+                            <h4 id="op-produzindo-count" class="text-2xl font-bold text-emerald-400 mt-1">0</h4>
+                        </div>
+                        <div class="bg-emerald-500/10 text-emerald-400 p-3 rounded-xl"><i class="fa-solid fa-gears text-lg"></i></div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase">OPs Concluídas</p>
+                            <h4 id="op-concluidas-count" class="text-2xl font-bold text-blue-400 mt-1">0</h4>
+                        </div>
+                        <div class="bg-blue-500/10 text-blue-400 p-3 rounded-xl"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                    </div>
+                </div>
+
+                <!-- Lista de Ordens de Produção -->
+                <div class="grid grid-cols-1 gap-4" id="ops-container">
+                    <!-- Preenchido dinamicamente -->
+                </div>
+            </div>
+
+            <!-- ================= TAB 4: QUALIDADE & RASTREIO ================= -->
+            <div id="tab-qualidade" class="tab-content hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">Controle de Qualidade & Rastreabilidade</h1>
+                        <p class="text-sm text-slate-400">Rastreio de equipamentos eletrotrônicos por lote/número de série e análise de causa raiz de falhas.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="openInspeccaoModal()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-rose-900/40 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                            <span>Registrar Inspeção / Falha</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-abas de Qualidade -->
+                <div class="flex space-x-2 border-b border-slate-800 pb-2">
+                    <button onclick="switchQualityTab('inspecoes')" id="qbtn-inspecoes" class="px-4 py-2 rounded-xl text-sm font-medium bg-emerald-600 text-white transition">Inspeções na Linha</button>
+                    <button onclick="switchQualityTab('rastreio')" id="qbtn-rastreio" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-400 hover:text-white transition">Rastreabilidade por Nº Série</button>
+                    <button onclick="switchQualityTab('causaraiz')" id="qbtn-causaraiz" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-400 hover:text-white transition">Análise de Causa Raiz (NEXO IA)</button>
+                </div>
+
+                <!-- Q-Tab 1: Inspeções -->
+                <div id="qcontent-inspecoes" class="space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+                        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                            <h3 class="font-bold text-white">Registro Digital de Inspeções de Qualidade</h3>
+                            <span class="text-xs text-slate-400">Linha SMT & Montagem Final</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-800/80 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase">
+                                        <th class="p-4">Data/Hora</th>
+                                        <th class="p-4">Produto</th>
+                                        <th class="p-4">Lote</th>
+                                        <th class="p-4">Turno / Operador</th>
+                                        <th class="p-4">Máquina</th>
+                                        <th class="p-4 text-center">Status</th>
+                                        <th class="p-4">Falha Registrada</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-inspecoes-body" class="divide-y divide-slate-800">
+                                    <!-- Preenchido por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q-Tab 2: Rastreio por Série -->
+                <div id="qcontent-rastreio" class="hidden space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-base font-bold text-white mb-2">Consulta de Rastreabilidade de Equipamento</h3>
+                        <p class="text-xs text-slate-400 mb-4">Digite o Número de Série do equipamento eletrotrônico para auditar toda a cadeia (componentes, lote, fornecedor e operador).</p>
+                        <div class="flex space-x-3 mb-6">
+                            <input type="text" id="serial-input" placeholder="Ex: SN-2026-9001" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white flex-1 focus:outline-none focus:border-emerald-500 font-mono">
+                            <button onclick="buscarSerial()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition">Pesquisar</button>
+                        </div>
+                        <div id="serial-result" class="hidden bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
+                            <!-- Preenchido dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q-Tab 3: Análise de Causa Raiz -->
+                <div id="qcontent-causaraiz" class="hidden space-y-6">
+                    <div class="bg-gradient-to-r from-slate-900 to-slate-900/90 border border-emerald-500/30 p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 translate-x-6 -translate-y-6 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/30">
+                                <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">NEXO AI - Motor de Correlação de Falhas</h3>
+                                <p class="text-xs text-slate-400">Cruzamento automatizado de variáveis de produção (operador, máquina, fornecedor e lote de componentes).</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                            <div class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl">
+                                <span class="text-xs font-semibold text-rose-400 uppercase">Falha Elétrica Recorrente</span>
+                                <h4 class="text-base font-bold text-white mt-1">Curto no Capacitor C12</h4>
+                                <p class="text-xs text-slate-400 mt-2">Correlação de 94% com o Fornecedor <span class="text-white font-medium">Alpha Semi Ltda</span> (Lote #LT-8832).</p>
+                            </div>
+                            <div class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl">
+                                <span class="text-xs font-semibold text-amber-400 uppercase">Falha de Montagem SMT</span>
+                                <h4 class="text-base font-bold text-white mt-1">Solda Fria em QFP</h4>
+                                <p class="text-xs text-slate-400 mt-2">Associada ao Turno C (Operador #402) na Máquina Pick & Place 03.</p>
+                            </div>
+                            <div class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl">
+                                <span class="text-xs font-semibold text-emerald-400 uppercase">Recomendação IA</span>
+                                <h4 class="text-base font-bold text-white mt-1">Bloquear Lote Imediato</h4>
+                                <p class="text-xs text-slate-400 mt-2">Sugerido bloqueio cautelar do lote de capacitores para evitar novas refações na linha.</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button onclick="executarAnaliseIA()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center space-x-2">
+                                <i class="fa-solid fa-microchip"></i>
+                                <span>Executar Novo Diagnóstico Avançado</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 5: RELATÓRIOS GERENCIAIS ================= -->
+            <div id="tab-relatorios" class="tab-content hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">Relatórios Gerenciais para Tomada de Decisão</h1>
+                        <p class="text-sm text-slate-400">Geração de relatórios consolidados de estoque, custos de refação e eficiência industrial.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="exportarRelatorioPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-700 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-file-pdf text-rose-400"></i>
+                            <span>Exportar Relatório PDF</span>
+                        </button>
+                        <button onclick="exportarRelatorioExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-900/40 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-file-excel"></i>
+                            <span>Exportar Dados (Excel)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg space-y-4">
+                        <h3 class="font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-bar text-emerald-400"></i>
+                            <span>Consumo de Matéria-Prima por Setor</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">Demonstrativo mensal dos insumos mais utilizados nas linhas de montagem.</p>
+                        <div class="space-y-3 pt-2">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-300">Placas Circuito Impresso (PCB)</span>
+                                    <span class="text-emerald-400 font-semibold">42%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-emerald-500 h-full rounded-full" style="width: 42%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-300">Semicondutores & ICs</span>
+                                    <span class="text-blue-400 font-semibold">28%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-blue-500 h-full rounded-full" style="width: 28%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-300">Componentes Passivos (Resistores/Capacitores)</span>
+                                    <span class="text-purple-400 font-semibold">18%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-purple-500 h-full rounded-full" style="width: 18%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-300">Chassis & Gabinetes Metálicos</span>
+                                    <span class="text-amber-400 font-semibold">12%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-amber-500 h-full rounded-full" style="width: 12%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg space-y-4">
+                        <h3 class="font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-shield-halved text-rose-400"></i>
+                            <span>Índice de Qualidade & Refação (FPY)</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">First Pass Yield (Taxa de Acerto de Primeira) nas últimas semanas.</p>
+                        <div class="flex items-center justify-around py-4">
+                            <div class="text-center">
+                                <span class="text-3xl font-extrabold text-emerald-400">96.8%</span>
+                                <span class="text-xs block text-slate-400 mt-1">FPY Médio Linha 1</span>
+                            </div>
+                            <div class="h-12 w-px bg-slate-800"></div>
+                            <div class="text-center">
+                                <span class="text-3xl font-extrabold text-amber-400">3.2%</span>
+                                <span class="text-xs block text-slate-400 mt-1">Taxa de Refação</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-800/60 p-4 rounded-xl text-xs text-slate-300 space-y-1">
+                            <p class="font-semibold text-white">Principais Motivos de Retrabalho:</p>
+                            <p>1. Solda fria em componentes QFP (45%)</p>
+                            <p>2. Curto em capacitor cerâmico (30%)</p>
+                            <p>3. Falha de pinagem em conector (25%)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ================= MODAIS ================= -->
+
+    <!-- Modal Novo Item Estoque -->
+    <div id="modal-item" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 id="modal-item-title" class="font-bold text-white text-base">Cadastrar Novo Item no Estoque</h3>
+                <button onclick="closeModal('modal-item')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-item" onsubmit="salvarItem(event)" class="p-6 space-y-4">
+                <input type="hidden" id="item-edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Código do Item</label>
+                        <input type="text" id="item-codigo" required placeholder="Ex: CMP-9050" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Categoria</label>
+                        <select id="item-categoria" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Semicondutores">Semicondutores</option>
+                            <option value="Passivos">Passivos</option>
+                            <option value="Conectores">Conectores</option>
+                            <option value="Placas PCB">Placas PCB</option>
+                            <option value="Chassi / Mecânica">Chassi / Mecânica</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Nome do Produto / Componente</label>
+                    <input type="text" id="item-nome" required placeholder="Ex: Microcontrolador ARM Cortex-M4" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Fornecedor</label>
+                        <input type="text" id="item-fornecedor" required placeholder="Ex: Alpha Semi Ltda" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Unidade de Medida</label>
+                        <select id="item-unidade" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="UN">Unidade (UN)</option>
+                            <option value="PC">Peça (PC)</option>
+                            <option value="MT">Metro (MT)</option>
+                            <option value="KG">Quilograma (KG)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Localização Física</label>
+                        <input type="text" id="item-local" required placeholder="Ex: Armazém A-02" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Quantidade Atual</label>
+                        <input type="number" id="item-qtd" required min="0" value="100" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Estoque Mínimo</label>
+                        <input type="number" id="item-min" required min="0" value="20" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-item')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium transition">Cancelar</button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">Salvar Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Registrar Movimentação -->
+    <div id="modal-movimento" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-bold text-white text-base">Registrar Movimentação de Estoque</h3>
+                <button onclick="closeModal('modal-movimento')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="salvarMovimento(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Movimentação</label>
+                    <select id="mov-tipo" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        <option value="Entrada">Entrada (Compra / Recebimento)</option>
+                        <option value="Saída">Saída (Consumo Produção)</option>
+                        <option value="Devolução">Devolução ao Fornecedor</option>
+                        <option value="Ajuste">Ajuste de Inventário</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Selecionar Item</label>
+                    <select id="mov-item-id" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        <!-- Preenchido dinamicamente -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Quantidade</label>
+                    <input type="number" id="mov-qtd" required min="1" value="10" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Observação / Justificativa</label>
+                    <input type="text" id="mov-obs" placeholder="Ex: Ordem de Produção OP-301" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-movimento')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium transition">Cancelar</button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">Confirmar Movimento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nova Ordem de Produção (OP) -->
+    <div id="modal-op" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-bold text-white text-base">Nova Ordem de Produção (OP)</h3>
+                <button onclick="closeModal('modal-op')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="salvarOP(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Número da OP</label>
+                    <input type="text" id="op-numero" required value="OP-2026-305" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Produto a Fabricar</label>
+                    <select id="op-produto" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        <option value="Controlador CLP Industrial NEXO-800">Controlador CLP Industrial NEXO-800</option>
+                        <option value="Inversores de Frequência 15kW">Inversores de Frequência 15kW</option>
+                        <option value="Módulo de Expansão I/O Digital">Módulo de Expansão I/O Digital</option>
+                        <option value="Fonte Chaveada 24V 10A">Fonte Chaveada 24V 10A</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Quantidade a Produzir</label>
+                        <input type="number" id="op-qtd" required min="1" value="50" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Linha de Montagem</label>
+                        <select id="op-linha" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Linha SMT 01">Linha SMT 01</option>
+                            <option value="Linha SMT 02">Linha SMT 02</option>
+                            <option value="Montagem Final 01">Montagem Final 01</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 text-xs text-slate-300">
+                    <i class="fa-solid fa-circle-info text-emerald-400 mr-1"></i> O sistema verificará automaticamente a disponibilidade dos materiais necessários no almoxarifado ao criar a OP.
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-op')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium transition">Cancelar</button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">Criar OP & Verificar Estoque</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Registrar Inspeção de Qualidade -->
+    <div id="modal-inspecao" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-bold text-white text-base">Registro Digital de Inspeção de Qualidade</h3>
+                <button onclick="closeModal('modal-inspecao')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="salvarInspecao(event)" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Número de Série (SN)</label>
+                        <input type="text" id="insp-serial" required value="SN-2026-9052" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Lote de Fabricação</label>
+                        <input type="text" id="insp-lote" required value="LT-2026-03B" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Produto Eletrotrônico</label>
+                    <select id="insp-produto" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        <option value="Controlador CLP Industrial NEXO-800">Controlador CLP Industrial NEXO-800</option>
+                        <option value="Inversores de Frequência 15kW">Inversores de Frequência 15kW</option>
+                        <option value="Módulo de Expansão I/O Digital">Módulo de Expansão I/O Digital</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Turno</label>
+                        <select id="insp-turno" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Turno A">Turno A</option>
+                            <option value="Turno B">Turno B</option>
+                            <option value="Turno C">Turno C</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Operador</label>
+                        <input type="text" id="insp-operador" required value="Carlos Silva (#402)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Máquina / Bancada</label>
+                        <input type="text" id="insp-maquina" required value="Pick & Place 03" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Resultado da Inspeção</label>
+                        <select id="insp-status" onchange="toggleFalhaSelect(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Aprovado">Aprovado (OK)</option>
+                            <option value="Reprovado">Reprovado (Falha)</option>
+                        </select>
+                    </div>
+                    <div id="div-falha-tipo">
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Falha</label>
+                        <select id="insp-falha" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Nenhuma">Nenhuma</option>
+                            <option value="Falha Elétrica (Curto / Componente)">Falha Elétrica (Curto / Componente)</option>
+                            <option value="Falha Mecânica (Chassi / Encaixe)">Falha Mecânica (Chassi / Encaixe)</option>
+                            <option value="Falha de Montagem (Solda Fria / Pinos)">Falha de Montagem (Solda Fria / Pinos)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-inspecao')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium transition">Cancelar</button>
+                    <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">Registrar Inspeção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- STREAMING_CHUNK:Initializing state variables... ---
+        let estoqueData = [
+            { id: 1, codigo: 'CMP-1001', nome: 'Microcontrolador ARM Cortex-M4', categoria: 'Semicondutores', fornecedor: 'Alpha Semi Ltda', unidade: 'UN', local: 'Armazém A-01', qtd: 145, min: 50 },
+            { id: 2, codigo: 'CMP-1002', nome: 'Capacitor Cerâmico 10uF 50V', categoria: 'Passivos', fornecedor: 'DigiPower Comp.', unidade: 'PC', local: 'Armazém A-02', qtd: 32, min: 100 }, // Abaixo do mínimo
+            { id: 3, codigo: 'CMP-1003', nome: 'Placa PCB CLP Base 8 E/S', categoria: 'Placas PCB', fornecedor: 'ElectroPlacas S.A.', unidade: 'UN', local: 'Armazém B-01', qtd: 12, min: 20 }, // Crítico
+            { id: 4, codigo: 'CMP-1004', nome: 'Conector Borne 3 Vias 5mm', categoria: 'Conectores', fornecedor: 'Conect Indústria', unidade: 'PC', local: 'Armazém C-03', qtd: 450, min: 150 },
+            { id: 5, codigo: 'CMP-1005', nome: 'Chassi Metálico Inversor 15kW', categoria: 'Chassi / Mecânica', fornecedor: 'Metalúrgica Industrial', unidade: 'UN', local: 'Armazém D-01', qtd: 8, min: 15 }, // Abaixo do mínimo
+            { id: 6, codigo: 'CMP-1006', nome: 'Transistor Mosfet IGBT 600V', categoria: 'Semicondutores', fornecedor: 'Alpha Semi Ltda', unidade: 'UN', local: 'Armazém A-03', qtd: 210, min: 80 }
+        ];
+
+        let movimentacoesData = [
+            { data: '18/09/2026 15:30', tipo: 'Entrada', item: 'Microcontrolador ARM Cortex-M4', qtd: 50, resp: 'Ana Souza', obs: 'Nota Fiscal #4492' },
+            { data: '18/09/2026 14:10', tipo: 'Saída', item: 'Capacitor Cerâmico 10uF 50V', qtd: 120, resp: 'Carlos Almoxarife', obs: 'OP-2026-301' },
+            { data: '18/09/2026 11:00', tipo: 'Saída', item: 'Placa PCB CLP Base 8 E/S', qtd: 15, resp: 'Carlos Almoxarife', obs: 'OP-2026-302' },
+            { data: '18/09/2026 09:15', tipo: 'Entrada', item: 'Conector Borne 3 Vias 5mm', qtd: 300, resp: 'Ana Souza', obs: 'Recebimento Semanal' }
+        ];
+
+        let opsData = [
+            { id: 1, numero: 'OP-2026-301', produto: 'Controlador CLP Industrial NEXO-800', qtd: 50, linha: 'Linha SMT 01', status: 'Produzindo', materiaisOk: true },
+            { id: 2, numero: 'OP-2026-302', produto: 'Inversores de Frequência 15kW', qtd: 20, linha: 'Montagem Final 01', status: 'Planejamento', materiaisOk: false },
+            { id: 3, numero: 'OP-2026-303', produto: 'Módulo de Expansão I/O Digital', qtd: 100, linha: 'Linha SMT 02', status: 'Concluída', materiaisOk: true }
+        ];
+
+        let inspecoesData = [
+            { data: '18/09/2026 16:00', produto: 'Controlador CLP Industrial NEXO-800', serial: 'SN-2026-9048', lote: 'LT-2026-03A', turno: 'Turno A', operador: 'Carlos Silva (#402)', maquina: 'Pick & Place 03', status: 'Aprovado', falha: 'Nenhuma' },
+            { data: '18/09/2026 15:12', produto: 'Inversores de Frequência 15kW', serial: 'SN-2026-9049', lote: 'LT-8832 (Alpha Semi)', turno: 'Turno B', operador: 'Mariana Lima (#210)', maquina: 'Bancada Teste Hi-Pot', status: 'Reprovado', falha: 'Falha Elétrica (Curto / Componente)' },
+            { data: '18/09/2026 13:45', produto: 'Controlador CLP Industrial NEXO-800', serial: 'SN-2026-9050', lote: 'LT-2026-03A', turno: 'Turno A', operador: 'Carlos Silva (#402)', maquina: 'Pick & Place 03', status: 'Aprovado', falha: 'Nenhuma' }
+        ];
+
+        let chartConsumoInstance = null;
+        let chartOPStatusInstance = null;
+
+        // --- STREAMING_CHUNK:Defining core navigation and UI functions... ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600/10', 'text-emerald-400', 'border', 'border-emerald-500/20');
+                btn.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-slate-200');
+            });
+
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.add('bg-emerald-600/10', 'text-emerald-400', 'border', 'border-emerald-500/20');
+            activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-slate-200');
+
+            if (tabId === 'dashboard') {
+                renderDashboardCharts();
+            }
+        }
+
+        function switchQualityTab(subId) {
+            ['inspecoes', 'rastreio', 'causaraiz'].forEach(id => {
+                document.getElementById('qcontent-' + id).classList.add('hidden');
+                document.getElementById('qbtn-' + id).classList.remove('bg-emerald-600', 'text-white');
+                document.getElementById('qbtn-' + id).classList.add('bg-slate-800', 'text-slate-400');
+            });
+            document.getElementById('qcontent-' + subId).classList.remove('hidden');
+            document.getElementById('qbtn-' + subId).classList.add('bg-emerald-600', 'text-white');
+            document.getElementById('qbtn-' + subId).classList.remove('bg-slate-800', 'text-slate-400');
+        }
+
+        function switchRole(role) {
+            showToast(`Perfil alterado para: ${role.toUpperCase()}. Interface adaptada.`, 'info');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgCol = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'warning' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-200 border border-slate-700');
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-sm font-medium transition transform translate-y-2 opacity-0 ${bgCol}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function openItemModal() {
+            document.getElementById('item-edit-id').value = '';
+            document.getElementById('item-codigo').value = 'CMP-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('item-nome').value = '';
+            document.getElementById('item-qtd').value = 100;
+            document.getElementById('item-min').value = 20;
+            openModal('modal-item');
+        }
+
+        function openMovimentoModal() {
+            const select = document.getElementById('mov-item-id');
+            select.innerHTML = estoqueData.map(i => `<option value="${i.id}">${i.codigo} - ${i.nome} (Atual: ${i.qtd})</option>`).join('');
+            openModal('modal-movimento');
+        }
+
+        function openOPModal() { openModal('modal-op'); }
+        function openInspeccaoModal() { openModal('modal-inspecao'); }
+
+        function toggleFalhaSelect(val) {
+            const div = document.getElementById('div-falha-tipo');
+            div.style.display = val === 'Reprovado' ? 'block' : 'none';
+        }
+
+        // --- STREAMING_CHUNK:Rendering dynamic data into tables and UI elements... ---
+        function renderAll() {
+            renderEstoqueTable();
+            renderMovimentacoesTable();
+            renderOPs();
+            renderInspecoesTable();
+            updateKPIs();
+            renderAlertas();
+        }
+
+        function updateKPIs() {
+            const totalItens = estoqueData.length;
+            const abaixoMin = estoqueData.filter(i => i.qtd <= i.min && i.qtd > 0).length;
+            const zerados = estoqueData.filter(i => i.qtd === 0).length;
+            const criticos = abaixoMin + zerados;
+
+            document.getElementById('kpi-total-itens').innerText = totalItens;
+            document.getElementById('kpi-baixo-minimo').innerText = abaixoMin;
+            document.getElementById('kpi-movimentacoes').innerText = movimentacoesData.length;
+            document.getElementById('kpi-criticos').innerText = criticos;
+        }
+
+        function renderAlertas() {
+            const container = document.getElementById('alerts-container');
+            let alertasHTML = '';
+
+            estoqueData.forEach(item => {
+                if (item.qtd <= item.min) {
+                    const isZero = item.qtd === 0;
+                    alertasHTML += `
+                        <div class="flex items-center justify-between p-3.5 bg-slate-800/80 border ${isZero ? 'border-rose-500/40' : 'border-amber-500/40'} rounded-xl">
+                            <div class="flex items-center space-x-3">
+                                <div class="${isZero ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'} p-2 rounded-lg">
+                                    <i class="fa-solid ${isZero ? 'fa-ban' : 'fa-triangle-exclamation'}"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-white">${item.codigo} - ${item.nome}</h4>
+                                    <p class="text-xs text-slate-400">Estoque atual: <span class="${isZero ? 'text-rose-400 font-bold' : 'text-amber-400 font-bold'}">${item.qtd} ${item.unidade}</span> (Mínimo recomendado: ${item.min}) • Local: ${item.local}</p>
+                                </div>
+                            </div>
+                            <button onclick="reabastecerItem(${item.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                                Reabastecer
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!alertasHTML) {
+                alertasHTML = `
+                    <div class="flex items-center space-x-3 p-4 bg-emerald-950/30 border border-emerald-800/40 rounded-xl text-emerald-400 text-sm">
+                        <i class="fa-solid fa-circle-check text-lg"></i>
+                        <span>Todos os estoques estão dentro dos níveis normais de segurança. Nenhuma interrupção prevista.</span>
+                    </div>
+                `;
+            }
+            container.innerHTML = alertasHTML;
+        }
+
+        function renderEstoqueTable(filtro = '', categoriaFiltro = '', statusFiltro = '') {
+            const tbody = document.getElementById('tabela-estoque-body');
+            let html = '';
+
+            const filtrados = estoqueData.filter(item => {
+                const matchTexto = item.codigo.toLowerCase().includes(filtro.toLowerCase()) || 
+                                   item.nome.toLowerCase().includes(filtro.toLowerCase()) || 
+                                   item.fornecedor.toLowerCase().includes(filtro.toLowerCase());
+                const matchCat = categoriaFiltro ? item.categoria === categoriaFiltro : true;
+                
+                let matchStatus = true;
+                if (statusFiltro === 'normal') matchStatus = item.qtd > item.min;
+                if (statusFiltro === 'baixo') matchStatus = item.qtd <= item.min && item.qtd > 0;
+                if (statusFiltro === 'zerado') matchStatus = item.qtd === 0;
+
+                return matchTexto && matchCat && matchStatus;
+            });
+
+            filtrados.forEach(item => {
+                let badge = '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full text-xs font-semibold">Normal</span>';
+                if (item.qtd === 0) {
+                    badge = '<span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-full text-xs font-semibold">Zerado</span>';
+                } else if (item.qtd <= item.min) {
+                    badge = '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs font-semibold">Abaixo Mín.</span>';
+                }
+
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="p-4 font-mono font-medium text-white">
+                            <div>${item.codigo}</div>
+                            <div class="text-xs text-slate-400 font-sans">${item.nome}</div>
+                        </td>
+                        <td class="p-4 text-slate-300">${item.categoria}</td>
+                        <td class="p-4 text-slate-300">${item.fornecedor}</td>
+                        <td class="p-4 text-slate-400 text-xs">${item.local}</td>
+                        <td class="p-4 text-center font-bold text-white">${item.qtd} ${item.unidade}</td>
+                        <td class="p-4 text-center text-slate-400">${item.min} ${item.unidade}</td>
+                        <td class="p-4 text-center">${badge}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <button onclick="editarItem(${item.id})" class="text-slate-400 hover:text-emerald-400 transition p-1" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="removerItem(${item.id})" class="text-slate-400 hover:text-rose-400 transition p-1" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html || `<tr><td colspan="8" class="p-6 text-center text-slate-500">Nenhum item encontrado no estoque.</td></tr>`;
+        }
+
+        function filterEstoque() {
+            const texto = document.getElementById('search-estoque').value;
+            const cat = document.getElementById('filter-categoria').value;
+            const status = document.getElementById('filter-status-estoque').value;
+            renderEstoqueTable(texto, cat, status);
+        }
+
+        function renderMovimentacoesTable() {
+            const tbody = document.getElementById('tabela-mov-body');
+            tbody.innerHTML = movimentacoesData.map(m => `
+                <tr class="hover:bg-slate-800/30">
+                    <td class="py-3 px-4 font-mono text-xs text-slate-400">${m.data}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-0.5 rounded text-xs font-semibold ${m.tipo === 'Entrada' ? 'bg-emerald-500/20 text-emerald-400' : (m.tipo === 'Saída' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400')}">${m.tipo}</span>
+                    </td>
+                    <td class="py-3 px-4 font-medium text-white">${m.item}</td>
+                    <td class="py-3 px-4 text-center font-bold text-white">${m.qtd}</td>
+                    <td class="py-3 px-4 text-slate-300">${m.resp}</td>
+                    <td class="py-3 px-4 text-slate-400 text-xs">${m.obs}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderOPs() {
+            const container = document.getElementById('ops-container');
+            let pCount = 0, prodCount = 0, cCount = 0;
+
+            container.innerHTML = opsData.map(op => {
+                if (op.status === 'Planejamento') pCount++;
+                if (op.status === 'Produzindo') prodCount++;
+                if (op.status === 'Concluída') cCount++;
+
+                let badgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                if (op.status === 'Produzindo') badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                if (op.status === 'Concluída') badgeColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-slate-800 p-3.5 rounded-xl border border-slate-700 text-emerald-400 font-bold font-mono">
+                                ${op.numero}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-base">${op.produto}</h4>
+                                <p class="text-xs text-slate-400 mt-0.5">Quantidade: <span class="text-white font-semibold">${op.qtd} unidades</span> • Linha: ${op.linha}</p>
+                                <div class="mt-2 flex items-center space-x-2">
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeColor}">${op.status}</span>
+                                    <span class="text-xs ${op.materiaisOk ? 'text-emerald-400' : 'text-amber-400'} font-medium">
+                                        <i class="fa-solid ${op.materiaisOk ? 'fa-circle-check' : 'fa-triangle-exclamation'} mr-1"></i>
+                                        ${op.materiaisOk ? 'Materiais Disponíveis no Almoxarifado' : 'Atenção: Falta de Insumos'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                            ${op.status === 'Planejamento' ? `<button onclick="mudarStatusOP(${op.id}, 'Produzindo')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">Iniciar OP</button>` : ''}
+                            ${op.status === 'Produzindo' ? `<button onclick="mudarStatusOP(${op.id}, 'Concluída')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">Concluir OP</button>` : ''}
+                            <button onclick="removerOP(${op.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 p-2 rounded-xl text-xs transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('op-planejamento-count').innerText = pCount;
+            document.getElementById('op-produzindo-count').innerText = prodCount;
+            document.getElementById('op-concluidas-count').innerText = cCount;
+        }
+
+        function renderInspecoesTable() {
+            const tbody = document.getElementById('tabela-inspecoes-body');
+            tbody.innerHTML = inspecoesData.map(ins => `
+                <tr class="hover:bg-slate-800/30">
+                    <td class="p-4 font-mono text-xs text-slate-400">${ins.data}</td>
+                    <td class="p-4 font-medium text-white">${ins.produto}</td>
+                    <td class="p-4 font-mono text-xs text-slate-300">${ins.lote}</td>
+                    <td class="p-4 text-slate-300 text-xs">${ins.turno} • ${ins.operador}</td>
+                    <td class="p-4 text-slate-400 text-xs">${ins.maquina}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${ins.status === 'Aprovado' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${ins.status}</span>
+                    </td>
+                    <td class="p-4 text-xs text-slate-300">${ins.falha}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- STREAMING_CHUNK:Adding action handlers and chart initializations... ---
+        function salvarItem(e) {
+            e.preventDefault();
+            const editId = document.getElementById('item-edit-id').value;
+            const newItem = {
+                id: editId ? parseInt(editId) : Date.now(),
+                codigo: document.getElementById('item-codigo').value,
+                nome: document.getElementById('item-nome').value,
+                categoria: document.getElementById('item-categoria').value,
+                fornecedor: document.getElementById('item-fornecedor').value,
+                unidade: document.getElementById('item-unidade').value,
+                local: document.getElementById('item-local').value,
+                qtd: parseInt(document.getElementById('item-qtd').value),
+                min: parseInt(document.getElementById('item-min').value)
+            };
+
+            if (editId) {
+                const idx = estoqueData.findIndex(i => i.id === parseInt(editId));
+                if (idx !== -1) estoqueData[idx] = newItem;
+                showToast('Item atualizado com sucesso!');
+            } else {
+                estoqueData.push(newItem);
+                showToast('Novo item cadastrado no estoque!');
+            }
+
+            closeModal('modal-item');
+            renderAll();
+        }
+
+        function editarItem(id) {
+            const item = estoqueData.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('item-edit-id').value = item.id;
+            document.getElementById('item-codigo').value = item.codigo;
+            document.getElementById('item-nome').value = item.nome;
+            document.getElementById('item-categoria').value = item.categoria;
+            document.getElementById('item-fornecedor').value = item.fornecedor;
+            document.getElementById('item-unidade').value = item.unidade;
+            document.getElementById('item-local').value = item.local;
+            document.getElementById('item-qtd').value = item.qtd;
+            document.getElementById('item-min').value = item.min;
+            openModal('modal-item');
+        }
+
+        function removerItem(id) {
+            if (confirm('Tem certeza que deseja excluir este item do estoque?')) {
+                estoqueData = estoqueData.filter(i => i.id !== id);
+                showToast('Item excluído com sucesso.', 'warning');
+                renderAll();
+            }
+        }
+
+        function reabastecerItem(id) {
+            const item = estoqueData.find(i => i.id === id);
+            if (item) {
+                item.qtd += 50;
+                movimentacoesData.unshift({
+                    data: new Date().toLocaleString('pt-BR'),
+                    tipo: 'Entrada',
+                    item: item.nome,
+                    qtd: 50,
+                    resp: 'Gerente (Auto Reabastecimento)',
+                    obs: 'Reposição automática de alerta'
+                });
+                showToast(`Item ${item.codigo} reabastecido com 50 unidades!`);
+                renderAll();
+            }
+        }
+
+        function salvarMovimento(e) {
+            e.preventDefault();
+            const itemId = parseInt(document.getElementById('mov-item-id').value);
+            const tipo = document.getElementById('mov-tipo').value;
+            const qtd = parseInt(document.getElementById('mov-qtd').value);
+            const obs = document.getElementById('mov-obs').value || 'Movimentação manual';
+
+            const item = estoqueData.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (tipo === 'Saída' || tipo === 'Devolução') {
+                item.qtd = Math.max(0, item.qtd - qtd);
+            } else {
+                item.qtd += qtd;
+            }
+
+            movimentacoesData.unshift({
+                data: new Date().toLocaleString('pt-BR'),
+                tipo: tipo,
+                item: item.nome,
+                qtd: qtd,
+                resp: 'Almoxarifado NEXO',
+                obs: obs
+            });
+
+            closeModal('modal-movimento');
+            showToast('Movimentação registrada com sucesso!');
+            renderAll();
+        }
+
+        function salvarOP(e) {
+            e.preventDefault();
+            const novaOP = {
+                id: Date.now(),
+                numero: document.getElementById('op-numero').value,
+                produto: document.getElementById('op-produto').value,
+                qtd: parseInt(document.getElementById('op-qtd').value),
+                linha: document.getElementById('op-linha').value,
+                status: 'Planejamento',
+                materiaisOk: Math.random() > 0.2 // Simulação de verificação automática
+            };
+
+            opsData.unshift(novaOP);
+            closeModal('modal-op');
+            showToast('Ordem de Produção criada com verificação de estoque!');
+            renderAll();
+        }
+
+        function mudarStatusOP(id, novoStatus) {
+            const op = opsData.find(o => o.id === id);
+            if (op) {
+                op.status = novoStatus;
+                showToast(`OP ${op.numero} atualizada para: ${novoStatus}`);
+                renderAll();
+            }
+        }
+
+        function removerOP(id) {
+            opsData = opsData.filter(o => o.id !== id);
+            showToast('Ordem de Produção removida.', 'warning');
+            renderAll();
+        }
+
+        function salvarInspecao(e) {
+            e.preventDefault();
+            const status = document.getElementById('insp-status').value;
+            const novaInsp = {
+                data: new Date().toLocaleString('pt-BR'),
+                produto: document.getElementById('insp-produto').value,
+                serial: document.getElementById('insp-serial').value,
+                lote: document.getElementById('insp-lote').value,
+                turno: document.getElementById('insp-turno').value,
+                operador: document.getElementById('insp-operador').value,
+                maquina: document.getElementById('insp-maquina').value,
+                status: status,
+                falha: status === 'Reprovado' ? document.getElementById('insp-falha').value : 'Nenhuma'
+            };
+
+            inspecoesData.unshift(novaInsp);
+            closeModal('modal-inspecao');
+            showToast('Inspeção de qualidade registrada na linha!');
+            renderAll();
+        }
+
+        function buscarSerial() {
+            const sn = document.getElementById('serial-input').value.trim();
+            const resDiv = document.getElementById('serial-result');
+            if (!sn) return;
+
+            resDiv.classList.remove('hidden');
+            resDiv.innerHTML = `
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span class="font-mono font-bold text-emerald-400 text-base">${sn}</span>
+                    <span class="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold">Rastreabilidade Completa OK</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
+                    <div><span class="text-slate-400">Produto:</span> <span class="text-white font-medium">Controlador CLP Industrial NEXO-800</span></div>
+                    <div><span class="text-slate-400">Lote de Fabricação:</span> <span class="text-white font-medium font-mono">LT-2026-03A</span></div>
+                    <div><span class="text-slate-400">Data de Produção:</span> <span class="text-white font-medium">18/09/2026 08:30</span></div>
+                    <div><span class="text-slate-400">Linha / Bancada:</span> <span class="text-white font-medium">Linha SMT 01 (Pick & Place 03)</span></div>
+                    <div><span class="text-slate-400">Operador:</span> <span class="text-white font-medium">Carlos Silva (#402)</span></div>
+                    <div><span class="text-slate-400">Componente Crítico:</span> <span class="text-white font-medium font-mono">ARM Cortex-M4 (Lote #4492)</span></div>
+                </div>
+            `;
+            showToast('Rastreabilidade do número de série auditada com sucesso.');
+        }
+
+        function executarAnaliseIA() {
+            showToast('NEXO IA analisando telemetria e cruzando variáveis de produção...', 'info');
+            setTimeout(() => {
+                showToast('Diagnóstico concluído! 3 correlações de causa raiz identificadas.');
+            }, 1500);
+        }
+
+        function refreshData() {
+            showToast('Sincronizando dados com o servidor IoT industrial...');
+            setTimeout(() => renderAll(), 800);
+        }
+
+        function exportarRelatorioPDF() {
+            showToast('Gerando relatório gerencial em PDF...');
+            setTimeout(() => showToast('Relatório PDF exportado com sucesso!'), 1200);
+        }
+
+        function exportarRelatorioExcel() {
+            showToast('Gerando planilha CSV/Excel de estoque e OPs...');
+            setTimeout(() => showToast('Planilha exportada com sucesso!'), 1200);
+        }
+
+        function renderDashboardCharts() {
+            const ctx1 = document.getElementById('chartConsumo').getContext('2d');
+            if (chartConsumoInstance) chartConsumoInstance.destroy();
+            chartConsumoInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [{
+                        label: 'Consumo de Componentes (UN)',
+                        data: [420, 580, 610, 530, 720, 390, 210],
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('chartOPStatus').getContext('2d');
+            if (chartOPStatusInstance) chartOPStatusInstance.destroy();
+            chartOPStatusInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Planejamento', 'Produzindo', 'Concluídas'],
+                    datasets: [{
+                        data: [1, 1, 1],
+                        backgroundColor: ['#f59e0b', '#10b981', '#3b82f6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+
+        // --- STREAMING_CHUNK:Initializing application on window load... ---
+        window.onload = function() {
+            renderAll();
+            renderDashboardCharts();
+        };
+    </script>
+</body>
+</html>
